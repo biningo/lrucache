@@ -38,9 +38,7 @@ func New(cap int64, f func(e *entry)) *Cache {
 }
 
 //RemoveOldest delete the least used element
-func (c *Cache) RemoveOldest() {
-	c.rwm.Lock()
-	defer c.rwm.Unlock()
+func (c *Cache) removeOldest() {
 	if ele := c.ll.Back(); ele != nil {
 		c.removeElement(ele)
 	}
@@ -51,13 +49,13 @@ func (c *Cache) Add(key string, val string) {
 	//如果不存在
 	if ok := c.Update(key, val); !ok {
 		c.rwm.Lock()
+		defer c.rwm.Unlock()
 		ele := c.ll.PushFront(&entry{key, val})
 		c.size += int64(len(val)) + int64(len(key))
 		c.m[key] = ele
 	}
-	c.rwm.Unlock() //解锁 防止锁重入造成死锁
 	for c.cap > 0 && c.cap < c.size {
-		c.RemoveOldest()
+		c.removeOldest()
 	}
 }
 
@@ -97,8 +95,8 @@ func (c *Cache) Update(key string, newVal string) bool {
 
 //Get key
 func (c *Cache) Get(key string) (val string, ok bool) {
-	c.rwm.RLock()
-	defer c.rwm.RUnlock()
+	c.rwm.Lock()
+	defer c.rwm.Unlock()
 	if ele, ok := c.m[key]; ok {
 		c.ll.MoveToFront(ele)
 		kv := ele.Value.(*entry)
