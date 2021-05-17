@@ -3,6 +3,7 @@ package lrucache
 
 import (
 	"container/list"
+	"sync"
 )
 
 /**
@@ -18,6 +19,7 @@ type Cache struct {
 	ll       *list.List
 	m        map[string]*list.Element
 	OnRemove func(e *entry) //callback when remove key
+	rwm      sync.RWMutex
 }
 
 type entry struct {
@@ -37,6 +39,8 @@ func New(cap int64, f func(e *entry)) *Cache {
 
 //RemoveOldest delete the least used element
 func (c *Cache) RemoveOldest() {
+	c.rwm.Lock()
+	defer c.rwm.Unlock()
 	if ele := c.ll.Back(); ele != nil {
 		c.removeElement(ele)
 	}
@@ -46,10 +50,12 @@ func (c *Cache) RemoveOldest() {
 func (c *Cache) Add(key string, val string) {
 	//如果不存在
 	if ok := c.Update(key, val); !ok {
+		c.rwm.Lock()
 		ele := c.ll.PushFront(&entry{key, val})
 		c.size += int64(len(val)) + int64(len(key))
 		c.m[key] = ele
 	}
+	c.rwm.Unlock() //解锁 防止锁重入造成死锁
 	for c.cap > 0 && c.cap < c.size {
 		c.RemoveOldest()
 	}
@@ -67,6 +73,8 @@ func (c *Cache) removeElement(ele *list.Element) {
 
 //Remove key
 func (c *Cache) Remove(key string) bool {
+	c.rwm.Lock()
+	defer c.rwm.Unlock()
 	if ele, ok := c.m[key]; ok {
 		c.removeElement(ele)
 	}
@@ -75,6 +83,8 @@ func (c *Cache) Remove(key string) bool {
 
 //Update key
 func (c *Cache) Update(key string, newVal string) bool {
+	c.rwm.Lock()
+	defer c.rwm.Unlock()
 	if ele, ok := c.m[key]; ok {
 		c.ll.MoveToFront(ele)
 		kv := ele.Value.(*entry)
@@ -87,6 +97,8 @@ func (c *Cache) Update(key string, newVal string) bool {
 
 //Get key
 func (c *Cache) Get(key string) (val string, ok bool) {
+	c.rwm.RLock()
+	defer c.rwm.RUnlock()
 	if ele, ok := c.m[key]; ok {
 		c.ll.MoveToFront(ele)
 		kv := ele.Value.(*entry)
@@ -97,6 +109,8 @@ func (c *Cache) Get(key string) (val string, ok bool) {
 
 //Keys get all keys
 func (c *Cache) Keys() []string {
+	c.rwm.RLock()
+	defer c.rwm.RUnlock()
 	keys := make([]string, 0, len(c.m))
 	for k := range c.m {
 		keys = append(keys, k)
@@ -106,6 +120,8 @@ func (c *Cache) Keys() []string {
 
 //Values get all values
 func (c *Cache) Values() []string {
+	c.rwm.RLock()
+	defer c.rwm.RUnlock()
 	values := make([]string, 0, len(c.m))
 	for _, ele := range c.m {
 		val := ele.Value.(*entry).val
