@@ -1,6 +1,8 @@
 package lrucache
 
 import (
+	"strconv"
+	"sync"
 	"testing"
 )
 
@@ -171,4 +173,24 @@ func TestCacheValues(t *testing.T) {
 		}
 	}
 
+}
+
+func TestCacheConcurrent(t *testing.T) {
+	cache := New(1000, nil)
+	wg := sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(k string) {
+			defer wg.Done()
+			cache.Add(k, k)
+		}(strconv.Itoa(i))
+	}
+	wg.Wait()
+	for i := 0; i < 100; i++ {
+		go func(k string) {
+			if _, ok := cache.Get(k); !ok {
+				t.Errorf("%s is not exists", k)
+			}
+		}(strconv.Itoa(i))
+	}
 }
