@@ -59,7 +59,7 @@ func (c *Cache) removeElement(ele *list.Element) {
 	c.ll.Remove(ele)
 	kv := ele.Value.(*entry)
 	delete(c.m, kv.key)
-	c.size -= int64(len(kv.key)) + int64(len(kv.val))
+	c.size -= int64(len(kv.key) + len(kv.val))
 	if c.OnRemove != nil {
 		c.OnRemove(kv)
 	}
@@ -93,4 +93,23 @@ func (c *Cache) Get(key string) (val string, ok bool) {
 		return kv.val, true
 	}
 	return
+}
+
+//Keys get all keys
+func (c *Cache) Keys() []string {
+	keys := []string{}
+	for k, _ := range c.m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+//Values get all values
+func (c *Cache) Values() []string {
+	values := []string{}
+	for _, ele := range c.m {
+		val := ele.Value.(*entry).val
+		values = append(values, val)
+	}
+	return values
 }
