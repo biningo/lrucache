@@ -65,7 +65,7 @@ func TestCacheRemove(t *testing.T) {
 		cache.Add(k, v)
 	}
 
-	for k, _ := range cacheData {
+	for k := range cacheData {
 		cache.Remove(k)
 		if _, ok := cache.Get(k); ok {
 			t.Errorf("value is removed but also exists!")

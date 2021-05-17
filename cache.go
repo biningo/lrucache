@@ -98,7 +98,7 @@ func (c *Cache) Get(key string) (val string, ok bool) {
 //Keys get all keys
 func (c *Cache) Keys() []string {
 	keys := []string{}
-	for k, _ := range c.m {
+	for k:= range c.m {
 		keys = append(keys, k)
 	}
 	return keys
