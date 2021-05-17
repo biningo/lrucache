@@ -113,7 +113,7 @@ func TestCacheRemoveOldest(t *testing.T) {
 	cache.Add("dddd", "dddd")
 
 	cache.Get("a")
-	cache.RemoveOldest()
+	cache.removeOldest()
 	if v, ok := cache.Get("bb"); ok {
 		t.Errorf("want %s remove but exists", v)
 	}
